@@ -43,9 +43,10 @@ async def list_tools() -> list[types.Tool]:
                     "license": {"type": "string", "description": "License slug (e.g. 'cc', 'cc-by', 'commercial')"},
                     "price": {"type": "number", "description": "Price in EUR (0 for free)"},
                     "file_path": {"type": "string", "description": "Absolute path to the STL or ZIP file"},
-                    "thumbnail_path": {"type": "string", "description": "Optional path to a JPEG thumbnail image"},
+                    "thumbnail_path": {"type": "string", "description": "Path to the listing thumbnail image (JPEG/PNG). Required — Cults3D will not publish a design without at least one image."},
+                    "dry_run": {"type": "boolean", "description": "If true, validate inputs and prepare the upload payload but do NOT submit to Cults3D. Use for testing.", "default": False},
                 },
-                "required": ["name", "description", "tags", "category", "license", "price", "file_path"],
+                "required": ["name", "description", "tags", "category", "license", "price", "file_path", "thumbnail_path"],
             },
         ),
         types.Tool(
@@ -159,7 +160,10 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
 
     try:
         if name == "upload_design":
-            result = await client.upload_design(**arguments)
+            result = await client.upload_design(
+                dry_run=arguments.pop("dry_run", False),
+                **arguments,
+            )
         elif name == "update_design":
             result = await client.update_design(**arguments)
         elif name == "list_my_designs":

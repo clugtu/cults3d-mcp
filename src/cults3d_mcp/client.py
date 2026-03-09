@@ -269,14 +269,25 @@ class Cults3DClient:
         license: str,
         price: float,
         file_path: str,
-        thumbnail_path: str | None = None,
+        thumbnail_path: str,
+        dry_run: bool = False,
     ) -> dict[str, Any]:
         """Upload a new design via multipart form-data.
 
         This uses the web form endpoint (not GraphQL) as that is what the
         Cults3D frontend uses for uploads.
+
+        ``thumbnail_path`` is required — Cults3D will not publish a design
+        without at least one illustration image.
+
+        Set ``dry_run=True`` to validate inputs and build the payload without
+        actually submitting to Cults3D. Useful for testing.
         """
-        token = await self._ensure_token()
+        if not Path(file_path).exists():
+            raise FileNotFoundError(f"STL/ZIP not found: {file_path}")
+        if not Path(thumbnail_path).exists():
+            raise FileNotFoundError(f"Thumbnail not found: {thumbnail_path}")
+
         files: dict[str, Any] = {
             "creation[name]": (None, name),
             "creation[description]": (None, description),
@@ -287,13 +298,27 @@ class Cults3DClient:
         }
         file_bytes = Path(file_path).read_bytes()
         files["creation[files][]"] = (Path(file_path).name, file_bytes, "application/octet-stream")
-        if thumbnail_path:
-            thumb_bytes = Path(thumbnail_path).read_bytes()
-            files["creation[illustration]"] = (
-                Path(thumbnail_path).name,
-                thumb_bytes,
-                "image/jpeg",
-            )
+        thumb_bytes = Path(thumbnail_path).read_bytes()
+        thumb_mime = "image/png" if thumbnail_path.lower().endswith(".png") else "image/jpeg"
+        files["creation[illustration]"] = (
+            Path(thumbnail_path).name,
+            thumb_bytes,
+            thumb_mime,
+        )
+
+        if dry_run:
+            return {
+                "dry_run": True,
+                "status": "validated",
+                "file": Path(file_path).name,
+                "thumbnail": Path(thumbnail_path).name,
+                "name": name,
+                "tags": tags,
+                "category": category,
+                "price": price,
+            }
+
+        token = await self._ensure_token()
         resp = await self._http.post(
             f"{CULTS_BASE}/en/creations",
             files=files,
