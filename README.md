@@ -79,8 +79,17 @@ Add to your MCP config (`~/.config/claude/claude_desktop_config.json` or equival
 git clone https://github.com/clugtu/cults3d-mcp
 cd cults3d-mcp
 pip install -e ".[dev]"
+pre-commit install
 pytest
 ```
+
+This repo uses [pre-commit](https://pre-commit.com/) with [ruff](https://docs.astral.sh/ruff/) for linting and formatting. Install `pre-commit` if you don't have it:
+
+```bash
+pip install pre-commit
+```
+
+Then run `pre-commit install` once to register the hooks — they'll run automatically on every `git commit`.
 
 ---
 
